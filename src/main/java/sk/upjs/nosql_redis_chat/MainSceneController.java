@@ -22,8 +22,19 @@ public class MainSceneController {
     @FXML private Button sendButton;
     @FXML private TextField textToSendTextField;
     @FXML private TextField menoTextField;
+    private RedisTemplate<String,String> redisTemplate;
+    private RedisConnection redisConnection;
+    public static final String CHANNEL_NAME = "chat2020";
 
 	private ObservableList<String> spravy;
+
+	public MainSceneController(){
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+		context.register(RedisConfiguration.class);
+		context.refresh();
+		redisTemplate = context.getBean(RedisTemplate.class);
+		redisConnection = context.getBean(RedisConnection.class);
+	}
 
     @FXML
     void initialize() {
@@ -34,15 +45,18 @@ public class MainSceneController {
     		meno = "user" + (int)(100000*Math.random());
     		menoTextField.textProperty().setValue(meno);
     	}
+    	sendButton.setDefaultButton(true);
     	sendButton.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
 				String text = textToSendTextField.textProperty().getValue();
 				if (text != null && text.trim().length() > 0) {
-          //TODO poslat data
+					String name = menoTextField.textProperty().getValue();
+          			redisTemplate.convertAndSend(CHANNEL_NAME,name +": "+text );
 				}
 			}
 		});
-      //TODO pocuvat na spravy od ostatnych
+    	SubscriberService service = new SubscriberService(redisConnection,spravy);
+		service.start();
     }
 }
